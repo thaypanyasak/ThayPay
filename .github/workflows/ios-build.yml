@@ -4,7 +4,7 @@ on:
   workflow_dispatch: # Cho phép bấm nút chạy thủ công trên giao diện GitHub
   push:
     branches:
-      - main # Tự động chạy khi push code lên nhánh main
+      - master # Tự động chạy khi push code lên nhánh master
 
 jobs:
   build-ios:
