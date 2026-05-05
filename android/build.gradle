@@ -1,0 +1,66 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir = "../build"
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(":app")
+
+    // AGP 8+ requires `namespace` for every Android module.
+    // Some 3rd-party plugins may still omit it.
+    def setNamespaceIfMissing = {
+        if (project.extensions.findByName("android") == null) return
+        def androidExt = project.extensions.getByName("android")
+        if (androidExt.hasProperty("namespace") && (androidExt.namespace == null || androidExt.namespace.toString().trim().isEmpty())) {
+            androidExt.namespace = "com.thaypay.${project.name}"
+        }
+    }
+
+    project.plugins.withId("com.android.library") { setNamespaceIfMissing() }
+    project.plugins.withId("com.android.application") { setNamespaceIfMissing() }
+
+    // Workaround for older plugin manifests that still declare `package="..."`.
+    // AGP 8+ rejects this in library manifests (expects namespace in Gradle).
+    if (project.name == "isar_flutter_libs") {
+        project.plugins.withId("com.android.library") {
+            def androidExt = project.extensions.getByName("android")
+            def originalManifest = project.file("src/main/AndroidManifest.xml")
+            def fixedManifestDir = new File(project.buildDir, "generated/fixedManifest")
+            def fixedManifest = new File(fixedManifestDir, "AndroidManifest.xml")
+
+            def fixManifestTask = project.tasks.register("fixIsarFlutterLibsManifest") {
+                inputs.file(originalManifest)
+                outputs.file(fixedManifest)
+                doLast {
+                    fixedManifestDir.mkdirs()
+                    def content = originalManifest.getText("UTF-8")
+                    // Remove the manifest package attribute (AGP 8+ forbids it in library manifests).
+                    content = content.replaceFirst(/\s+package="[^"]+"/, '')
+                    fixedManifest.setText(content, "UTF-8")
+                }
+            }
+
+            // Ensure manifest is fixed before Android reads it.
+            project.tasks.matching {
+                it.name == "preBuild" ||
+                    (it.name.startsWith("process") && it.name.toLowerCase().contains("manifest"))
+            }.configureEach {
+                dependsOn(fixManifestTask)
+            }
+
+            androidExt.sourceSets.named("main") {
+                manifest.srcFile(fixedManifest)
+            }
+        }
+    }
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}

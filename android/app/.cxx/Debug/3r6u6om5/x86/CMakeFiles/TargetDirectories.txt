@@ -1,0 +1,2 @@
+C:/Users/thayz/OneDrive/Desktop/ThayPay/android/app/.cxx/Debug/3r6u6om5/x86/CMakeFiles/edit_cache.dir
+C:/Users/thayz/OneDrive/Desktop/ThayPay/android/app/.cxx/Debug/3r6u6om5/x86/CMakeFiles/rebuild_cache.dir

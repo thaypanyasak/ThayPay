@@ -1,0 +1,48 @@
+name: Build iOS IPA (Unsigned)
+
+on:
+  workflow_dispatch: # Cho phép bấm nút chạy thủ công trên giao diện GitHub
+  push:
+    branches:
+      - main # Tự động chạy khi push code lên nhánh main
+
+jobs:
+  build-ios:
+    name: Build iOS App
+    runs-on: macos-latest # BẮT BUỘC dùng máy chủ macOS của GitHub
+
+    steps:
+      # 1. Tải source code về máy chủ
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Cài đặt Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x' # Sử dụng phiên bản Flutter 3.x mới nhất
+          channel: 'stable'
+
+      # 3. Cài đặt các thư viện (packages)
+      - name: Install Dependencies
+        run: flutter pub get
+
+      # 4. Build file iOS (Không cần chữ ký điện tử - Unsigned)
+      - name: Build iOS App (No Codesign)
+        run: |
+          flutter build ios --release --no-codesign
+
+      # 5. Đóng gói thư mục .app thành file .ipa
+      - name: Create IPA payload
+        run: |
+          mkdir -p Payload
+          mv build/ios/iphoneos/Runner.app Payload/
+          zip -qr ThayPay.ipa Payload
+
+      # 6. Upload file .ipa lên GitHub Artifacts để anh tải về
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ThayPay-iOS-IPA
+          path: ThayPay.ipa
+          retention-days: 7 # File sẽ được giữ trên GitHub trong 7 ngày
